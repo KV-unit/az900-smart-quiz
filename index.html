@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AZ-900 Smart Quiz (Unofficial)</title>
+  <meta name="description" content="An unofficial AZ-900 practice quiz with instant feedback and an explanation for every answer.">
+  <script>
+    // Apply the saved theme before first paint to avoid a flash.
+    try {
+      var t = localStorage.getItem("az900quiz.theme");
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) { /* storage blocked: follow the system theme */ }
+  </script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%234f46e5%27/%3E%3Ctext x=%2732%27 y=%2743%27 font-family=%27Arial%27 font-size=%2729%27 font-weight=%27700%27 text-anchor=%27middle%27 fill=%27white%27%3EAZ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <a class="skip-link" href="#app">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./" aria-label="AZ-900 Smart Quiz home">
+        <span class="brand-mark" aria-hidden="true">AZ</span>
+        <span class="brand-text">Smart Quiz</span>
+      </a>
+      <span class="badge" title="This project is not affiliated with Microsoft">Unofficial</span>
+      <span class="spacer"></span>
+      <span id="mode-pill" class="pill" hidden></span>
+      <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch colour theme">
+        <span aria-hidden="true">&#9680;</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="app" class="wrap" tabindex="-1">
+    <p class="loading" role="status">Loading your quiz&hellip;</p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>
+        <strong>Unofficial study tool.</strong> Not affiliated with, endorsed by, or sponsored by Microsoft.
+        Questions are original and based on the public AZ-900 skills outline on Microsoft Learn.
+        Always check the official documentation for the latest details.
+      </p>
+    </div>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
