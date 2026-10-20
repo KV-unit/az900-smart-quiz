@@ -4,5 +4,12 @@
   "description": "Unofficial AZ-900 practice quiz with instant feedback and explanations (hackathon project)",
   "private": true,
   "type": "module",
-  "license": "MIT"
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node tests/serve.mjs",
+    "test": "node --test tests/quiz.test.js tests/data.test.js",
+    "test:e2e": "node tests/e2e.mjs",
+    "seed": "python tools/make_seed.py"
+  }
 }
