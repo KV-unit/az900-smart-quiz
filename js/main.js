@@ -1,10 +1,11 @@
-// App entry point (step 7: quiz builder + quiz screen with instant feedback).
+// App entry point: quiz builder, quiz screen with instant feedback, and results.
 import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JS_CDN } from "./config.js";
 import { initBackend } from "./data.js";
 import { renderHome } from "./home.js";
 import { renderQuiz } from "./quizview.js";
+import { renderResults } from "./results.js";
 import { h, mount } from "./dom.js";
-import { buildQuiz, summarise } from "./quiz.js";
+import { buildQuiz } from "./quiz.js";
 
 const app = document.getElementById("app");
 const modePill = document.getElementById("mode-pill");
@@ -106,8 +107,11 @@ async function showHome() {
   }
 }
 
-function startQuiz(options) {
+let lastOptions = null; // so "same settings" can start another quiz
+
+function startQuiz(options, remember = true) {
   leaveQuiz();
+  if (remember) lastOptions = options;
   const quiz = buildQuiz(bank.questions, options);
   if (quiz.length === 0) return showHome();
   const sessionId = newSessionId();
@@ -120,7 +124,7 @@ function startQuiz(options) {
       submit: (question, chosenIndex) => backend.submitAnswer({ questionId: question.id, chosenIndex, sessionId }),
     },
     {
-      onFinish: (results) => showFinished(results),
+      onFinish: (results) => showResults(results),
       onExit: showHome,
     },
   );
@@ -129,20 +133,21 @@ function startQuiz(options) {
   window.scrollTo({ top: 0 });
 }
 
-// The full results screen is built in the next step. For now: a short summary.
-function showFinished(results) {
+function showResults(results) {
   leaveQuiz();
-  const s = summarise(results);
-  mount(
-    app,
-    h(
-      "section",
-      { class: "hero" },
-      h("h1", {}, `You scored ${s.correct} / ${s.total} (${s.percent}%)`),
-      h("p", {}, "The detailed results screen arrives in the next step."),
-      h("button", { class: "btn", type: "button", onclick: showHome }, "Back to quiz builder"),
-    ),
+  const topicsById = Object.fromEntries(bank.topics.map((t) => [t.id, t]));
+  const view = renderResults(
+    { results, topicsById },
+    {
+      onRetryMissed: (missedIds) =>
+        startQuiz({ topicIds: null, difficulty: "any", onlyIds: missedIds, count: missedIds.length }, false),
+      onAgain: () => startQuiz({ ...lastOptions }),
+      onHome: showHome,
+    },
   );
+  mount(app, view.el);
+  window.scrollTo({ top: 0 });
+  view.play();
 }
 
 async function boot() {
