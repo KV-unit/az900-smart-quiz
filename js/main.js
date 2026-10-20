@@ -1,9 +1,10 @@
-// App entry point (step 6: quiz builder home screen).
+// App entry point (step 7: quiz builder + quiz screen with instant feedback).
 import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JS_CDN } from "./config.js";
 import { initBackend } from "./data.js";
 import { renderHome } from "./home.js";
+import { renderQuiz } from "./quizview.js";
 import { h, mount } from "./dom.js";
-import { filterPool } from "./quiz.js";
+import { buildQuiz, summarise } from "./quiz.js";
 
 const app = document.getElementById("app");
 const modePill = document.getElementById("mode-pill");
@@ -25,6 +26,15 @@ async function loadData() {
   const res = await fetch("data/questions.json");
   if (!res.ok) throw new Error(`Could not load data/questions.json (${res.status})`);
   return res.json();
+}
+
+function newSessionId() {
+  if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const x = [...b].map((n) => n.toString(16).padStart(2, "0")).join("");
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
 }
 
 function setupTheme() {
@@ -57,8 +67,16 @@ function showError(message, retry) {
 
 // ---- app --------------------------------------------------------------------
 let backend;
+let bank = { topics: [], questions: [] };
+let activeQuiz = null; // { destroy() } for the quiz screen currently shown
+
+function leaveQuiz() {
+  activeQuiz?.destroy();
+  activeQuiz = null;
+}
 
 async function showHome() {
+  leaveQuiz();
   mount(app, h("p", { class: "loading", role: "status" }, "Loading…"));
   try {
     const [topics, questions, progress, weakIds] = await Promise.all([
@@ -67,12 +85,13 @@ async function showHome() {
       backend.getProgress(),
       backend.getWeakIds(),
     ]);
+    bank = { topics, questions };
     mount(
       app,
       renderHome(
         { topics, questions, progress, weakIds, backend },
         {
-          onStart: (options) => showPlaceholder(questions, options),
+          onStart: (options) => startQuiz(options),
           onReset: async () => {
             await backend.resetProgress();
             showHome();
@@ -87,17 +106,41 @@ async function showHome() {
   }
 }
 
-// The quiz screen is built in the next step. Until then, show what was built.
-function showPlaceholder(questions, options) {
-  const available = filterPool(questions, options).length;
+function startQuiz(options) {
+  leaveQuiz();
+  const quiz = buildQuiz(bank.questions, options);
+  if (quiz.length === 0) return showHome();
+  const sessionId = newSessionId();
+  const topicsById = Object.fromEntries(bank.topics.map((t) => [t.id, t]));
+
+  const view = renderQuiz(
+    {
+      quiz,
+      topicsById,
+      submit: (question, chosenIndex) => backend.submitAnswer({ questionId: question.id, chosenIndex, sessionId }),
+    },
+    {
+      onFinish: (results) => showFinished(results),
+      onExit: showHome,
+    },
+  );
+  activeQuiz = view;
+  mount(app, view.el);
+  window.scrollTo({ top: 0 });
+}
+
+// The full results screen is built in the next step. For now: a short summary.
+function showFinished(results) {
+  leaveQuiz();
+  const s = summarise(results);
   mount(
     app,
     h(
       "section",
       { class: "hero" },
-      h("h1", {}, "Quiz built"),
-      h("p", {}, `${Math.min(options.count, available)} questions are ready. The quiz screen arrives in the next step.`),
-      h("button", { class: "btn", type: "button", onclick: showHome }, "Back"),
+      h("h1", {}, `You scored ${s.correct} / ${s.total} (${s.percent}%)`),
+      h("p", {}, "The detailed results screen arrives in the next step."),
+      h("button", { class: "btn", type: "button", onclick: showHome }, "Back to quiz builder"),
     ),
   );
 }
